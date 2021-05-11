@@ -7,7 +7,8 @@ import streamlit as st
 
 CURRENT_PARKING_FILENAME = "current_parking.txt"
 PATHS_JSON_FILENAME = "paths.json"
-LAT, LON = st.secrets['lat'], st.secrets['lon']
+STREAMLIT_SHARE_WRITE_PATH = "/home/appuser"
+LAT, LON = st.secrets["lat"], st.secrets["lon"]
 
 
 def get_map_deck(street_to_highlight):
@@ -42,6 +43,13 @@ def get_map_deck(street_to_highlight):
 def main_form():
     st.set_page_config(page_title="WDIP", page_icon="🚗")
     current_parking_file = Path(CURRENT_PARKING_FILENAME)
+
+    # streamlit share allow writes here
+    if Path(STREAMLIT_SHARE_WRITE_PATH).exists():
+        current_parking_file = (
+            Path(STREAMLIT_SHARE_WRITE_PATH) / CURRENT_PARKING_FILENAME
+        )
+
     try:
         current_parking = current_parking_file.read_text()
     except FileNotFoundError:
