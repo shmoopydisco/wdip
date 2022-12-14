@@ -21,7 +21,7 @@ def get_location_file_path():
 
 def get_location_and_save_to_file():
     user_location = get_geolocation(component_key="get_geolocation")
-    current_location = ""
+    current_location = "13, 37"
     if user_location:
         current_location = f"{str(user_location['coords']['latitude'])}, {str(user_location['coords']['longitude'])}"
         st.write(f"Current location: {current_location}")
