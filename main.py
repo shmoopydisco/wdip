@@ -1,54 +1,40 @@
-import json
 from pathlib import Path
 
 import pandas as pd
-import pydeck as pdk
 import streamlit as st
+from geopy.geocoders import Nominatim
+from streamlit_js_eval import get_geolocation
 
 CURRENT_PARKING_FILENAME = "current_parking.txt"
-PATHS_JSON_FILENAME = "paths.json"
 STREAMLIT_SHARE_WRITE_PATH = "/home/appuser"
-LAT, LON = st.secrets["lat"], st.secrets["lon"]
 
 
-def get_map_deck(street_to_highlight):
-    paths_json = json.loads(Path(PATHS_JSON_FILENAME).read_text())
-    paths_json = [
-        street for street in paths_json if street["name"] == street_to_highlight
-    ]
-    df = pd.DataFrame(paths_json)
-
-    view_state = pdk.ViewState(latitude=LAT, longitude=LON, zoom=17)
-    layer = pdk.Layer(
-        type="PathLayer",
-        data=df,
-        pickable=True,
-        get_color="color",
-        width_scale=2,
-        width_min_pixels=2,
-        get_path="path",
-        get_width=2,
-    )
-
-    deck = pdk.Deck(
-        layers=[layer],
-        map_style="mapbox://styles/mapbox/streets-v11",
-        initial_view_state=view_state,
-        tooltip={"text": "{name}"},
-    )
-
-    return deck
-
-
-def main_form():
-    st.set_page_config(page_title="WDIP", page_icon="🚗")
+def get_location_file_path():
     current_parking_file = Path(CURRENT_PARKING_FILENAME)
 
     # streamlit share allow writes here
     if Path(STREAMLIT_SHARE_WRITE_PATH).exists():
-        current_parking_file = (
-            Path(STREAMLIT_SHARE_WRITE_PATH) / CURRENT_PARKING_FILENAME
-        )
+        current_parking_file = Path(STREAMLIT_SHARE_WRITE_PATH) / CURRENT_PARKING_FILENAME
+
+    return current_parking_file
+
+
+def get_location_and_save_to_file():
+    user_location = get_geolocation(component_key="get_geolocation")
+    current_location = ""
+    if user_location:
+        current_location = f"{str(user_location['coords']['latitude'])}, {str(user_location['coords']['longitude'])}"
+        st.write(f"Current location: {current_location}")
+        f = get_location_file_path()
+        f.write_text(current_location)
+        st.success('Location saved!')
+
+    return current_location
+
+
+def main_form():
+    st.set_page_config(page_title="WDIP", page_icon="🚗")
+    current_parking_file = get_location_file_path()
 
     try:
         current_parking = current_parking_file.read_text()
@@ -56,22 +42,22 @@ def main_form():
         current_parking_file.touch()
         current_parking = ""
 
-    page_title = st.empty()
-    map = st.empty()
+    if not current_parking:
+        current_parking = get_location_and_save_to_file()
 
-    parking_options = [
-        street["name"]
-        for street in iter(json.loads(Path(PATHS_JSON_FILENAME).read_text()))
-    ]
-    with st.form("Form1"):
-        select_result = st.selectbox("Change To", parking_options)
-        submitted = st.form_submit_button("Submit")
-        if submitted:
-            current_parking = select_result
-            current_parking_file.write_text(current_parking)
 
-    page_title.title(f"I Parked In: {current_parking}")
-    map.pydeck_chart(get_map_deck(current_parking))
+    geolocator = Nominatim(user_agent="wdip")
+    location_name = geolocator.reverse(current_parking)
+
+    st.title(f"I Parked In:")
+    st.subheader(location_name)
+    
+    lat, lon = current_parking.split(",")
+    df = pd.DataFrame({"lat": float(lat), "lon": float(lon)}, index=[0])
+    st.map(data=df, zoom=16)
+
+    st.button('Save current location', type='primary', on_click=get_location_and_save_to_file)
+        
 
 
 if __name__ == "__main__":
