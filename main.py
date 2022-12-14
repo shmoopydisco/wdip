@@ -45,9 +45,11 @@ def main_form():
     if not current_parking:
         current_parking = get_location_and_save_to_file()
 
-
-    geolocator = Nominatim(user_agent="wdip")
-    location_name = geolocator.reverse(current_parking)
+    try:
+        geolocator = Nominatim(user_agent="wdip")
+        location_name = geolocator.reverse(current_parking)
+    except ValueError:
+        location_name = "Unknown"
 
     st.title(f"I Parked In:")
     st.subheader(location_name)
