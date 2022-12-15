@@ -1,5 +1,5 @@
 streamlit
-pydeck
-pandas
 streamlit_js_eval
 geopy
+streamlit_folium
+folium
